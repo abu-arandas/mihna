@@ -8,7 +8,9 @@ The workshop ends up with a record of what a trainee actually did, and what a su
 
 The pilot is **light-vehicle auto repair in Amman**, for 5 to 10 workshops and one training or employer partner.
 
-## What is built (slice 1)
+## What is built
+
+**Slice 1: roles, the checklist, sign-off**
 
 - **Roles per workshop:** trainee, supervisor and admin. Whoever starts a workshop is its admin and adds people by
   the email of their account. The database checks every role on every write.
@@ -19,9 +21,22 @@ The pilot is **light-vehicle auto repair in Amman**, for 5 to 10 workshops and o
   change sent twice changes nothing twice. A refused change is set aside with its reason, never silently dropped.
 - **Sign-off:** supervisors see everything waiting, oldest first, and each trainee's progress.
 
-Next, in order: job assignment and practical hours, photo and voice evidence, safety induction and PPE sign-off,
-and a shareable bilingual verified-skills page. Not planned for the pilot: payroll, a job marketplace, a full LMS,
-broad compliance reporting, or automated safety decisions.
+**Slice 2: jobs, attendance and hours**
+
+- **Supervised jobs:** a supervisor gives a trainee a job card (what, which car, which checklist skills it
+  practises). The trainee marks it done with the time it took; the job's skills are then logged as practised, so
+  they wait for sign-off with the job as their note. The supervisor checks the job and confirms the time that counts,
+  or calls off one not started.
+- **Attendance:** the trainee checks in and out on their phone, signal or not. One open shift at a time; a shift is
+  at most 16 hours. The supervisor confirms each shift, and can fix the times (a forgotten check-out) as they do.
+- **Practical hours, two kinds kept apart:** *workshop hours* (confirmed shifts) and *hands-on hours* (checked
+  jobs), each with what still waits for a supervisor. Trainees see theirs; supervisors see every trainee's.
+- Every id is made on the phone, so all seven new actions go through the same offline queue and are safe to send
+  twice ([`supabase/migrations/20261128000000_jobs_and_hours.sql`](supabase/migrations/20261128000000_jobs_and_hours.sql)).
+
+Next, in order: photo and voice evidence, safety induction and PPE sign-off, and a shareable bilingual
+verified-skills page. Not planned for the pilot: payroll, a job marketplace, a full LMS, broad compliance reporting,
+or automated safety decisions.
 
 ## Run it
 
@@ -38,7 +53,7 @@ flutter run -d chrome --dart-define=SUPABASE_URL=https://<project>.supabase.co -
 ```bash
 dart format lib tool test
 flutter analyze
-flutter test                                # the offline queue, and every screen at phone width in both languages
+flutter test                                # the offline queue, jobs, shifts and hours, and every screen at phone width in both languages
 tool/check_layers.sh
 node tool/check_arabic.mjs
 PGHOST=... PGUSER=... tool/check_sql.sh     # who can see and change what; needs a Postgres 15+

@@ -19,6 +19,7 @@ import 'package:mihna/controllers/session_controller.dart';
 import 'package:mihna/controllers/workshop_controller.dart';
 import 'package:mihna/l10n/translations.dart';
 import 'package:mihna/models/change.dart';
+import 'package:mihna/models/job.dart';
 import 'package:mihna/models/membership.dart';
 import 'package:mihna/models/role.dart';
 import 'package:mihna/models/skill_record.dart';
@@ -106,6 +107,55 @@ class StandInLogbook implements LogbookService {
   ];
 
   @override
+  Future<List<Job>> jobs(String workshopId) async => [
+    Job(
+      id: 'job-1',
+      workshopId: workshop,
+      traineeId: trainee,
+      assignedBy: usta,
+      title: 'Front brake pads',
+      vehicle: '2014 Corolla',
+      skillCodes: const ['brakes.pads', 'brakes.inspect'],
+      assignedAt: at,
+    ),
+    Job(
+      id: 'job-2',
+      workshopId: workshop,
+      traineeId: trainee,
+      title: 'Oil and filter change',
+      vehicle: 'Hyundai Elantra',
+      skillCodes: const ['service.oil'],
+      status: JobStatus.done,
+      assignedAt: at.subtract(const Duration(days: 1)),
+      minutes: 45,
+      note: 'Drain plug torqued to spec',
+    ),
+    Job(
+      id: 'job-3',
+      workshopId: workshop,
+      traineeId: trainee,
+      title: 'Battery test and replacement',
+      status: JobStatus.checked,
+      assignedAt: at.subtract(const Duration(days: 2)),
+      minutes: 90,
+      checkedMinutes: 75,
+    ),
+  ];
+
+  @override
+  Future<List<Shift>> shifts(String workshopId) async => [
+    Shift(
+      id: 'shift-1',
+      workshopId: workshop,
+      traineeId: trainee,
+      checkIn: DateTime.utc(2026, 11, 24, 5),
+      checkOut: DateTime.utc(2026, 11, 24, 13),
+      confirmedAt: DateTime.utc(2026, 11, 24, 14),
+    ),
+    Shift(id: 'shift-2', workshopId: workshop, traineeId: trainee, checkIn: DateTime.utc(2026, 11, 25, 5), checkOut: DateTime.utc(2026, 11, 25, 12, 30)),
+  ];
+
+  @override
   Future<void> send(Change change) async => throw const SocketException('no signal in the pit');
 }
 
@@ -162,25 +212,101 @@ void main() {
           );
           await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
           await tester.pumpAndSettle();
-          if (who == 'trainee') {
-            // A queued change shows at once, with no signal.
-            await tester.runAsync(() => Get.find<LogbookController>().practise('service.fluids', 'Topped up coolant'));
+          final logbook = Get.find<LogbookController>();
+          final tag = '$language-${dark ? 'dark' : 'light'}';
+          Future<void> tab(int i) async {
+            await tester.tap(find.byType(NavigationDestination).at(i));
             await tester.pumpAndSettle();
-            expect(Get.find<LogbookController>().pendingCount.value, 1);
           }
-          if (shots) await _save(tester, boundary, '$who-$language-${dark ? 'dark' : 'light'}');
+
+          Future<void> closeSheet(Key inside) async {
+            Navigator.of(tester.element(find.byKey(inside))).pop();
+            await tester.pumpAndSettle();
+          }
+
           if (who == 'trainee') {
+            // Today: checking in shows at once, with no signal.
+            expect(find.byKey(const Key('check-in')), findsOneWidget);
+            if (shots) await _save(tester, boundary, 'today-$tag');
+            await tester.tap(find.byKey(const Key('check-in')));
+            await tester.pumpAndSettle();
+            expect(find.byKey(const Key('check-out')), findsOneWidget);
+            expect(logbook.pendingCount.value, 1);
+            if (shots) await _save(tester, boundary, 'checked-in-$tag');
+            // The job sheet: finishing a job is one tap more.
+            await tester.tap(find.text('Front brake pads'));
+            await tester.pumpAndSettle();
+            expect(find.byKey(const Key('finish-job')), findsOneWidget);
+            if (shots) await _save(tester, boundary, 'job-$tag');
+            await tester.tap(find.byKey(const Key('minutes-more')));
+            await tester.pump();
+            await tester.tap(find.byKey(const Key('finish-job')));
+            await tester.pumpAndSettle();
+            // The job and its two skills, on top of the check-in.
+            await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+            await tester.pumpAndSettle();
+            expect(logbook.jobs['job-1']!.status, JobStatus.done);
+            expect(logbook.jobs['job-1']!.minutes, 75);
+            expect(logbook.recordOf(trainee, 'brakes.inspect')!.note, contains('2014 Corolla'));
+            expect(logbook.pendingCount.value, 4);
+
+            await tab(1);
+            await tester.runAsync(() => logbook.practise('service.fluids', 'Topped up coolant'));
+            await tester.pumpAndSettle();
+            expect(logbook.pendingCount.value, 5);
+            if (shots) await _save(tester, boundary, 'trainee-$tag');
             await tester.tap(find.byIcon(Icons.replay).first);
             await tester.pumpAndSettle();
             expect(find.byKey(const Key('log-practice')), findsOneWidget);
-            if (shots) await _save(tester, boundary, 'sheet-$language-${dark ? 'dark' : 'light'}');
+            if (shots) await _save(tester, boundary, 'sheet-$tag');
+            await closeSheet(const Key('log-practice'));
+
+            await tab(2);
+            expect(find.byKey(const Key('hours-workshop')), findsOneWidget);
+            if (shots) await _save(tester, boundary, 'hours-$tag');
           }
           if (who == 'supervisor') {
-            await tester.tap(find.byType(ListTile).first);
+            if (shots) await _save(tester, boundary, 'supervisor-$tag');
+            await tester.tap(find.byKey(const ValueKey('skill-$trainee/brakes.pads')));
             await tester.pumpAndSettle();
             expect(find.byKey(const Key('sign-off')), findsOneWidget);
-            if (shots) await _save(tester, boundary, 'review-$language-${dark ? 'dark' : 'light'}');
+            if (shots) await _save(tester, boundary, 'review-$tag');
+            await closeSheet(const Key('sign-off'));
+
+            await tester.tap(find.text('Oil and filter change'));
+            await tester.pumpAndSettle();
+            expect(find.byKey(const Key('check-job')), findsOneWidget);
+            if (shots) await _save(tester, boundary, 'check-job-$tag');
+            await tester.tap(find.byKey(const Key('minutes-less')));
+            await tester.pump();
+            await tester.tap(find.byKey(const Key('check-job')));
+            await tester.pumpAndSettle();
+            expect(logbook.jobs['job-2']!.status, JobStatus.checked);
+            expect(logbook.jobs['job-2']!.checkedMinutes, 30);
+
+            await tester.tap(find.byKey(const ValueKey('shift-shift-2')));
+            await tester.pumpAndSettle();
+            expect(find.byKey(const Key('confirm-shift')), findsOneWidget);
+            if (shots) await _save(tester, boundary, 'shift-$tag');
+            await tester.tap(find.byKey(const Key('confirm-shift')));
+            await tester.pumpAndSettle();
+            expect(logbook.shifts['shift-2']!.confirmed, isTrue);
+            expect(logbook.hoursOf(trainee).workshop, const Duration(hours: 15, minutes: 30));
+
+            await tab(1);
+            expect(find.byKey(const Key('give-job')), findsOneWidget);
+            if (shots) await _save(tester, boundary, 'jobs-$tag');
+            await tester.tap(find.byKey(const Key('give-job')));
+            await tester.pumpAndSettle();
+            expect(find.byKey(const Key('save-job')), findsOneWidget);
+            if (shots) await _save(tester, boundary, 'give-job-$tag');
+            Navigator.of(tester.element(find.byKey(const Key('save-job')))).pop();
+            await tester.pumpAndSettle();
+
+            await tab(2);
+            if (shots) await _save(tester, boundary, 'trainees-$tag');
           }
+          if (who == 'new' && shots) await _save(tester, boundary, 'new-$tag');
           await tester.pumpWidget(const SizedBox.shrink());
           Get.find<LogbookController>().onClose();
           Get.reset();

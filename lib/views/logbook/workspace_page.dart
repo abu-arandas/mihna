@@ -10,13 +10,16 @@ import '../../models/membership.dart';
 import '../../models/role.dart';
 import '../../widgets/language_button.dart';
 import '../../widgets/sync_badge.dart';
+import '../work/hours_page.dart';
+import '../work/jobs_board.dart';
+import '../work/today_page.dart';
 import 'people_page.dart';
 import 'review_queue.dart';
 import 'skill_checklist.dart';
 import 'trainee_list.dart';
 
-/// The workshop, as the person's role sees it. A trainee gets their checklist. A supervisor gets what waits for
-/// sign-off and the trainees; an admin also gets the people.
+/// The workshop, as the person's role sees it. A trainee gets their day (check-in and jobs), their checklist and
+/// their hours. A supervisor gets what waits for them, the jobs and the trainees; an admin also gets the people.
 class WorkspacePage extends StatefulWidget {
   const WorkspacePage({required this.membership, super.key});
 
@@ -40,8 +43,16 @@ class _WorkspacePageState extends State<WorkspacePage> {
   Widget build(BuildContext context) {
     final m = widget.membership;
     final tabs = <(IconData, String, Widget)>[
-      if (m.role == Role.trainee) (Icons.checklist, 'My skills', SkillChecklist(traineeId: m.userId, traineeName: m.displayName, reviewer: false)),
-      if (m.role.reviews) ...[(Icons.task_alt, 'To sign off', const ReviewQueue()), (Icons.groups_outlined, 'Trainees', const TraineeList())],
+      if (m.role == Role.trainee) ...[
+        (Icons.today_outlined, 'Today', TodayPage(me: m)),
+        (Icons.checklist, 'My skills', SkillChecklist(traineeId: m.userId, traineeName: m.displayName, reviewer: false)),
+        (Icons.schedule, 'Hours', HoursPage(traineeId: m.userId, traineeName: m.displayName, supervisor: false)),
+      ],
+      if (m.role.reviews) ...[
+        (Icons.task_alt, 'To sign off', const ReviewQueue()),
+        (Icons.build_circle_outlined, 'Jobs', const JobsBoard()),
+        (Icons.groups_outlined, 'Trainees', const TraineeList()),
+      ],
       if (m.role == Role.admin) (Icons.manage_accounts_outlined, 'People', const PeoplePage()),
     ];
     final tab = _tab.clamp(0, tabs.length - 1);

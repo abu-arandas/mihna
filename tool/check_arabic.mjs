@@ -74,7 +74,7 @@ for (const file of walk(lib).filter((f) => !f.startsWith(i18n))) {
 
 // Widgets that translate a text they are handed: `Col(label: 'Product')`, `PageFrame(title: 'Reports')`, ...
 // A literal given to one of these names should have an Arabic entry too.
-const PASSED = ['label', 'title', 'subtitle', 'confirmLabel', 'cancelLabel', 'hint', 'emptyTitle', 'emptyMessage', 'eyebrow', 'detail', 'help', 'description'];
+const PASSED = ['label', 'title', 'subtitle', 'message', 'confirmLabel', 'cancelLabel', 'hint', 'emptyTitle', 'emptyMessage', 'eyebrow', 'detail', 'help', 'description'];
 const passedRe = new RegExp(`\\b(?:${PASSED.join('|')}):\\s*('(?:[^'\\\\\\n]|\\\\.)*'|"(?:[^"\\\\\\n]|\\\\.)*")`, 'g');
 for (const file of walk(lib).filter((f) => !f.startsWith(i18n))) {
   const text = fs.readFileSync(file, 'utf8');
@@ -84,6 +84,14 @@ for (const file of walk(lib).filter((f) => !f.startsWith(i18n))) {
     if (/^\s*\.tr/.test(after) || /^\s*[+']/.test(after)) continue;
     want(unquote(m[1]), file, lineOf(text, m.index));
   }
+}
+
+// Widgets that translate their first, unnamed text: `SectionTitle('Jobs to check')`.
+const POSITIONAL = ['SectionTitle'];
+const positionalRe = new RegExp(`\\b(?:${POSITIONAL.join('|')})\\(\\s*('(?:[^'\\\\\\n]|\\\\.)*'|"(?:[^"\\\\\\n]|\\\\.)*")`, 'g');
+for (const file of walk(lib).filter((f) => !f.startsWith(i18n))) {
+  const text = fs.readFileSync(file, 'utf8');
+  for (const m of text.matchAll(positionalRe)) want(unquote(m[1]), file, lineOf(text, m.index));
 }
 
 // Messages a controller hands back for the screen to translate and show.

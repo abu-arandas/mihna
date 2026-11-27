@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mihna/models/change.dart';
+import 'package:mihna/models/job.dart';
 import 'package:mihna/models/skill_record.dart';
 import 'package:mihna/models/trade.dart';
 import 'package:mihna/services/change_queue.dart';
@@ -195,5 +196,97 @@ void main() {
       }
     }
     expect(trade.skills.where((s) => s.safety), isNotEmpty);
+  });
+
+  group('jobs and shifts', () {
+    final at = DateTime.utc(2026, 11, 27, 8);
+    Job job({JobStatus status = JobStatus.assigned}) =>
+        Job(id: 'j1', workshopId: 'w1', traineeId: 't1', title: 'Front pads', skillCodes: const ['brakes.pads'], status: status, assignedAt: at);
+
+    test('a job shows given, done and checked before the server has it, and nothing undoes a check', () {
+      final given = AssignJobChange(id: newId(), workshopId: 'w1', job: job(), at: at).applyTo(null);
+      expect(given.status, JobStatus.assigned);
+      final done = FinishJobChange(id: newId(), workshopId: 'w1', jobId: 'j1', minutes: 90, note: 'n', at: at).applyTo(given)!;
+      expect((done.status, done.minutes), (JobStatus.done, 90));
+      final checked = CheckJobChange(id: newId(), workshopId: 'w1', jobId: 'j1', minutes: 75, note: '', at: at).applyTo(done)!;
+      expect((checked.status, checked.checkedMinutes, checked.minutes), (JobStatus.checked, 75, 90));
+      expect(FinishJobChange(id: newId(), workshopId: 'w1', jobId: 'j1', minutes: 120, note: '', at: at).applyTo(checked), checked);
+      expect(
+        CancelJobChange(id: newId(), workshopId: 'w1', jobId: 'j1', at: at).applyTo(done),
+        done,
+        reason: 'a finished job cannot be called off',
+      );
+      expect(
+        CheckJobChange(id: newId(), workshopId: 'w1', jobId: 'j1', minutes: 75, note: '', at: at).applyTo(given),
+        given,
+        reason: 'not finished yet',
+      );
+    });
+
+    test('a shift opens, closes and is confirmed with corrected times; a confirmed one stays', () {
+      final opened = CheckInChange(id: newId(), workshopId: 'w1', shiftId: 's1', traineeId: 't1', at: at).applyTo(null);
+      expect(opened.open, isTrue);
+      final closed = CheckOutChange(id: newId(), workshopId: 'w1', shiftId: 's1', at: at.add(const Duration(hours: 8))).applyTo(opened)!;
+      expect(closed.length, const Duration(hours: 8));
+      final confirmed = ConfirmShiftChange(
+        id: newId(),
+        workshopId: 'w1',
+        shiftId: 's1',
+        checkIn: at,
+        checkOut: at.add(const Duration(hours: 7, minutes: 30)),
+        at: at.add(const Duration(hours: 9)),
+      ).applyTo(closed)!;
+      expect((confirmed.confirmed, confirmed.length), (true, const Duration(hours: 7, minutes: 30)));
+      expect(CheckOutChange(id: newId(), workshopId: 'w1', shiftId: 's1', at: at.add(const Duration(hours: 10))).applyTo(confirmed), confirmed);
+    });
+
+    test('hours count only what a supervisor confirmed, and say what waits', () {
+      final shifts = [
+        Shift(id: 'a', workshopId: 'w1', traineeId: 't1', checkIn: at, checkOut: at.add(const Duration(hours: 8)), confirmedAt: at),
+        Shift(id: 'b', workshopId: 'w1', traineeId: 't1', checkIn: at, checkOut: at.add(const Duration(hours: 2))),
+        Shift(id: 'c', workshopId: 'w1', traineeId: 't1', checkIn: at),
+        Shift(id: 'd', workshopId: 'w1', traineeId: 'other', checkIn: at, checkOut: at.add(const Duration(hours: 5)), confirmedAt: at),
+      ];
+      final jobs = [
+        job(status: JobStatus.checked).copyWith(minutes: 90, checkedMinutes: 60),
+        job(status: JobStatus.done).copyWith(minutes: 30),
+        job(status: JobStatus.cancelled).copyWith(minutes: 600),
+      ];
+      expect(
+        Hours.of('t1', shifts, jobs),
+        const Hours(workshop: Duration(hours: 8), workshopWaiting: Duration(hours: 2), handsOn: Duration(hours: 1), handsOnWaiting: Duration(minutes: 30)),
+      );
+    });
+
+    test('job and shift changes read back what they wrote', () {
+      final changes = <Change>[
+        AssignJobChange(id: newId(), workshopId: 'w1', job: job(), at: at),
+        FinishJobChange(id: newId(), workshopId: 'w1', jobId: 'j1', minutes: 45, note: 'n', at: at),
+        CheckJobChange(id: newId(), workshopId: 'w1', jobId: 'j1', minutes: 30, note: 'm', at: at),
+        CancelJobChange(id: newId(), workshopId: 'w1', jobId: 'j1', at: at),
+        CheckInChange(id: newId(), workshopId: 'w1', shiftId: 's1', traineeId: 't1', at: at),
+        CheckOutChange(id: newId(), workshopId: 'w1', shiftId: 's1', at: at),
+        ConfirmShiftChange(id: newId(), workshopId: 'w1', shiftId: 's1', checkIn: at, checkOut: at.add(const Duration(hours: 1)), at: at),
+      ];
+      for (final c in changes) {
+        expect(Change.fromJson(jsonDecode(jsonEncode(c.toJson())) as Map<String, Object?>).toJson(), c.toJson(), reason: c.target);
+      }
+      expect({for (final c in changes) c.target}, hasLength(changes.length), reason: 'each kind has its own target');
+      final j = job(status: JobStatus.checked).copyWith(minutes: 90, checkedMinutes: 60, doneAt: at, checkedAt: at);
+      expect(Job.fromJson(jsonDecode(jsonEncode(j.toJson())) as Map<String, Object?>), j);
+      final s = Shift(id: 's1', workshopId: 'w1', traineeId: 't1', checkIn: at, checkOut: at.add(const Duration(hours: 1)), confirmedAt: at);
+      expect(Shift.fromJson(jsonDecode(jsonEncode(s.toJson())) as Map<String, Object?>), s);
+    });
+
+    test('a check-in and check-out made with no signal go out in order, after it comes back', () async {
+      final server = Server()..reachable = false;
+      final queue = ChangeQueue(MapStore(), server.send);
+      await queue.add(CheckInChange(id: newId(), workshopId: 'w1', shiftId: 's1', traineeId: 't1', at: at));
+      await queue.add(CheckOutChange(id: newId(), workshopId: 'w1', shiftId: 's1', at: at.add(const Duration(hours: 8))));
+      expect((await queue.flush()).offline, isTrue);
+      server.reachable = true;
+      expect(await queue.flush(), (sent: 2, rejected: 0, offline: false));
+      expect([for (final c in server.received) c.runtimeType], [CheckInChange, CheckOutChange]);
+    });
   });
 }
