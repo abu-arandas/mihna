@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <title>Mihna</title>
+  <circle cx="60" cy="60" r="52" fill="#1F5F5B"/>
+  <path d="M60 26 L89.4 43 L89.4 77 L60 94 L30.6 77 L30.6 43 Z" fill="none" stroke="#F7F5F0" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M45 61 L55.5 71.5 L76 50" fill="none" stroke="#F2A93B" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

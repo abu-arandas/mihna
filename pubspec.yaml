@@ -1,0 +1,50 @@
+name: mihna
+description: "Mihna by Arandas Tech: an Arabic-first, offline apprenticeship tool for small workshops."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  # Material widgets, as a package since Flutter 3.50 deprecated package:flutter/material.dart.
+  material_ui: ^1.11.1
+
+  # Pinned exactly: one maintainer, and 5.0 has been a release candidate since 2023. See ARCHITECTURE.md.
+  get: 4.7.3
+  supabase_flutter: ^2.18.3
+  # The plain-Dart client, so lib/services needs no Flutter import.
+  supabase: ^2.16.0
+  # Error reports, sent only when the build is given a SENTRY_DSN (lib/config/errors.dart).
+  sentry: ^10.7.0
+  # The phone's storage for the queue of unsent changes; already part of supabase_flutter.
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Rubik
+      fonts:
+        - asset: assets/fonts/Rubik.ttf
+          weight: 300
+        - asset: assets/fonts/Rubik.ttf
+          weight: 400
+        - asset: assets/fonts/Rubik.ttf
+          weight: 500
+        - asset: assets/fonts/Rubik.ttf
+          weight: 600
+        - asset: assets/fonts/Rubik.ttf
+          weight: 700
+        - asset: assets/fonts/Rubik.ttf
+          weight: 800
+        - asset: assets/fonts/Rubik.ttf
+          weight: 900
