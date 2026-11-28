@@ -10,6 +10,7 @@ import 'package:mihna/services/change_queue.dart';
 import 'package:mihna/services/logbook_service.dart';
 import 'package:mihna/services/neon_data.dart';
 import 'package:mihna/services/workshop_service.dart';
+import 'package:postgrest/postgrest.dart';
 
 import 'change_queue_test.dart' show MapStore;
 
@@ -31,7 +32,7 @@ class StandInNeon {
   int tokens = 0;
   bool online = true;
   DateTime now = DateTime.utc(2026, 11, 28, 9);
-  Map<String, Object?> Function(http.Request request)? rpc;
+  Map<String, Object?>? Function(http.Request request)? rpc;
 
   // The answer carries its request, as a real one does (the PostgREST client reads it).
   late final client = MockClient((request) async {
@@ -241,6 +242,21 @@ void main() {
     await expectLater(logbook.send(change), throwsA(isA<RejectedChange>().having((e) => e.message, 'message', 'Only a trainee can log practice')));
     neon.rpc = (_) => {'code': 'PGRST301', 'message': 'JWT expired'};
     await expectLater(logbook.send(change), throwsA(isNot(isA<RejectedChange>())));
+  });
+
+  test('a cold database that does not see the token yet is asked again, and never sets the change aside', () async {
+    final neon = StandInNeon();
+    final service = neon.authService(MapStore());
+    await service.signIn(email: 'omar@example.com', password: 'right-password');
+    final logbook = NeonLogbookService(NeonData(url: data, token: service.accessToken, httpClient: neon.client));
+    final change = PractiseChange(id: 'c1', workshopId: 'w1', traineeId: omar, skillCode: 'safety.ppe', note: '', at: DateTime.utc(2026, 11, 28));
+    var calls = 0;
+    neon.rpc = (_) => ++calls == 1 ? {'code': 'P0001', 'message': 'Sign in first'} : null;
+    await logbook.send(change);
+    expect(calls, 2);
+
+    neon.rpc = (_) => {'code': 'P0001', 'message': 'Sign in first'};
+    await expectLater(logbook.send(change), throwsA(isA<PostgrestException>()));
   });
 
   test('a phone build with no origin is told plainly', () async {

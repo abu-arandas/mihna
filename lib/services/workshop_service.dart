@@ -78,13 +78,23 @@ class NeonWorkshopService implements WorkshopService {
 
 /// Runs [call], turning a refusal from the database (a raised exception, a permission or a check) into a
 /// [RejectedChange] with its message. Anything else, such as no signal, passes through unchanged.
-Future<T> rejecting<T>(Future<T> Function() call) async {
+///
+/// A database that has just woken can take a valid token without reading who it is for, and answers "Sign in first"
+/// (seen on Neon's first request after a cold start). That is asked once more after a moment, and if it holds it is
+/// left as an error to try again later, never a refusal, so the queue does not set a good change aside.
+Future<T> rejecting<T>(Future<T> Function() call, {Duration retryAfter = const Duration(seconds: 1)}) async {
   try {
-    return await call();
+    try {
+      return await call();
+    } on PostgrestException catch (e) {
+      if (!_notSignedIn(e)) rethrow;
+      await Future<void>.delayed(retryAfter);
+      return await call();
+    }
   } on PostgrestException catch (e) {
     final code = e.code ?? '';
     // PGRST301 to PGRST303: the token was refused or ran out. Signing in again fixes that, so it is not a refusal.
-    if (code.startsWith('PGRST30')) rethrow;
+    if (code.startsWith('PGRST30') || _notSignedIn(e)) rethrow;
     // P0001: raised by a function. 42501: no permission. 22xxx and 23xxx: a value or a constraint. PGRST: a request
     // the API cannot serve. All are answers from the server, not a lost connection.
     if (code == 'P0001' || code == '42501' || code.startsWith('22') || code.startsWith('23') || code.startsWith('PGRST')) {
@@ -93,3 +103,5 @@ Future<T> rejecting<T>(Future<T> Function() call) async {
     rethrow;
   }
 }
+
+bool _notSignedIn(PostgrestException e) => e.code == 'P0001' && e.message == 'Sign in first';
