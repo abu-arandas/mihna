@@ -12,6 +12,10 @@ flutter build web --release --wasm --dart-define=NEON_AUTH_URL=... --dart-define
 Serve `build/web` from any static host (Vercel, Netlify, Cloudflare Pages, nginx). Send every unknown path to
 `index.html` so links to app pages open. Add the web address to Neon Auth's trusted domains.
 
+The pilot's web app is on Vercel (project `mihna`, linked to this repository), served at https://mihna.arandas.tech
+through a CNAME on Porkbun. `vercel.json` sends every path to `index.html`, and `tool/vercel_build.sh` fetches the
+Flutter release the app is tested on and builds against the pilot's Neon project, so each push to `main` redeploys.
+
 ## Android
 
 ```bash
