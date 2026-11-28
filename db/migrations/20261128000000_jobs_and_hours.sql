@@ -15,8 +15,8 @@ create type public.job_status as enum ('assigned', 'done', 'checked', 'cancelled
 create table public.jobs (
   id uuid primary key,
   workshop_id uuid not null references public.workshops on delete cascade,
-  trainee_id uuid not null references auth.users on delete cascade,
-  assigned_by uuid references auth.users on delete set null,
+  trainee_id uuid not null,
+  assigned_by uuid,
   title text not null check (length(trim(title)) between 1 and 120),
   vehicle text not null default '' check (length(vehicle) <= 80),
   -- Codes from the trade's checklist (lib/models/trade.dart), at most 12.
@@ -30,7 +30,7 @@ create table public.jobs (
   note text not null default '' check (length(note) <= 1000),
   done_at timestamptz,
   -- The supervisor's, when they check it. checked_minutes is what counts.
-  checked_by uuid references auth.users on delete set null,
+  checked_by uuid,
   checked_minutes integer check (checked_minutes between 1 and 720),
   check_note text not null default '' check (length(check_note) <= 1000),
   checked_at timestamptz,
@@ -44,10 +44,10 @@ create index jobs_workshop on public.jobs (workshop_id, trainee_id);
 create table public.shifts (
   id uuid primary key,
   workshop_id uuid not null references public.workshops on delete cascade,
-  trainee_id uuid not null references auth.users on delete cascade,
+  trainee_id uuid not null,
   check_in timestamptz not null,
   check_out timestamptz,
-  confirmed_by uuid references auth.users on delete set null,
+  confirmed_by uuid,
   confirmed_at timestamptz,
   updated_at timestamptz not null default now(),
   check (check_out is null or (check_out > check_in and check_out <= check_in + interval '16 hours')),
@@ -73,8 +73,9 @@ create policy "shifts: own, or the workshop's for supervisors" on public.shifts
     trainee_id = (select auth.uid()) or public.my_role(workshop_id) in ('supervisor', 'admin')
   );
 
-revoke all on public.jobs, public.shifts from anon;
+revoke all on public.jobs, public.shifts from anonymous;
 revoke insert, update, delete on public.jobs, public.shifts from authenticated;
+grant select on public.jobs, public.shifts to authenticated;
 
 -- True when the caller supervises (or runs) the workshop.
 create function public.i_supervise(ws uuid) returns boolean
@@ -231,6 +232,6 @@ begin
 end $$;
 
 revoke execute on function public.i_supervise, public.assign_job, public.cancel_job, public.finish_job, public.check_job,
-  public.check_in, public.check_out, public.confirm_shift from public, anon;
+  public.check_in, public.check_out, public.confirm_shift from public, anonymous;
 grant execute on function public.i_supervise, public.assign_job, public.cancel_job, public.finish_job, public.check_job,
   public.check_in, public.check_out, public.confirm_shift to authenticated;

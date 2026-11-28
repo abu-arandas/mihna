@@ -1,21 +1,21 @@
 # Deploy
 
-Every build takes the Supabase keys with `--dart-define`. A build without them shows why it cannot start.
+Every build takes the Neon project's two addresses with `--dart-define` (docs/SETUP.md). A build without them shows
+why it cannot start.
 
 ## Web
 
 ```bash
-flutter build web --release --wasm --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+flutter build web --release --wasm --dart-define=NEON_AUTH_URL=... --dart-define=NEON_DATA_API_URL=...
 ```
 
 Serve `build/web` from any static host (Vercel, Netlify, Cloudflare Pages, nginx). Send every unknown path to
-`index.html` so links to app pages open. In Supabase, set **Authentication → URL configuration → Site URL** to the
-web address.
+`index.html` so links to app pages open. Add the web address to Neon Auth's trusted domains.
 
 ## Android
 
 ```bash
-flutter build appbundle --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+flutter build appbundle --release --dart-define=NEON_AUTH_URL=... --dart-define=NEON_DATA_API_URL=...
 ```
 
 Signing for Google Play: create an upload key, reference it from `android/key.properties` (kept out of git), and
@@ -24,7 +24,7 @@ follow Flutter's "Build and release an Android app" guide. Use `flutter build ap
 ## iPhone
 
 ```bash
-flutter build ipa --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+flutter build ipa --release --dart-define=NEON_AUTH_URL=... --dart-define=NEON_DATA_API_URL=...
 ```
 
 Needs a Mac with Xcode and an Apple Developer account; set the team and bundle id in Xcode first.
@@ -36,7 +36,7 @@ developer log, the browser console on the web. To hear about the ones people mee
 [Sentry](https://sentry.io), a Flutter project in it, and give its DSN (project Settings, Client Keys) to the build:
 
 ```bash
-flutter build web --release --wasm --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=... \
+flutter build web --release --wasm --dart-define=NEON_AUTH_URL=... --dart-define=NEON_DATA_API_URL=... \
   --dart-define=SENTRY_DSN=https://...ingest.sentry.io/... --dart-define=SENTRY_RELEASE=$(git rev-parse --short HEAD)
 ```
 
@@ -50,5 +50,5 @@ build. A host that sends a Content-Security-Policy must allow `connect-src https
 
 ## Database
 
-Apply new files in `supabase/migrations` before deploying an app that needs them, and never edit a migration that
+Apply new files in `db/migrations` before deploying an app that needs them, and never edit a migration that
 has already run on a client's project: add a new one.

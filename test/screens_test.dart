@@ -1,6 +1,6 @@
 // Builds Mihna's main screens at a phone's width, in Arabic and English, light and dark, and fails on any layout
 // error (a row that overflows, a text that does not fit). The services are stand-ins that live only in this test:
-// the app itself always runs on Supabase (ARCHITECTURE.md, rule 3).
+// the app itself always runs on Neon (ARCHITECTURE.md, rule 3).
 //
 // With SHOTS=1 it also saves each screen as a picture in .shots/, to look at:
 //
@@ -48,19 +48,16 @@ class StandInAuth implements AuthService {
   Stream<String?> get userChanges => const Stream.empty();
 
   @override
-  Stream<void> get passwordRecoveries => const Stream.empty();
-
-  @override
   Future<void> signIn({required String email, required String password}) async {}
 
   @override
-  Future<bool> signUp({required String email, required String password, String? redirectTo}) async => true;
+  Future<bool> signUp({required String email, required String password}) async => true;
 
   @override
-  Future<void> sendPasswordReset({required String email, String? redirectTo}) async {}
+  Future<void> sendPasswordReset({required String email}) async {}
 
   @override
-  Future<void> updatePassword(String password) async {}
+  Future<void> resetPassword({required String email, required String code, required String password}) async {}
 
   @override
   Future<void> signOut() async {}

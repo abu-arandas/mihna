@@ -3,7 +3,7 @@
 --
 -- People: 7 admin of workshop C, 8 supervisor in C, 9 trainee in C, 10 trainee in C, 11 admin of workshop D.
 
-insert into auth.users (id, email) values
+insert into neon_auth."user" (id, email) values
   ('77777777-7777-7777-7777-777777777777', 'admin@c.test'),
   ('88888888-8888-8888-8888-888888888888', 'usta@c.test'),
   ('99999999-9999-9999-9999-999999999999', 'trainee@c.test'),
@@ -285,7 +285,7 @@ begin
 end $$;
 
 reset role;
-set role anon;
+set role anonymous;
 
 do $$
 begin

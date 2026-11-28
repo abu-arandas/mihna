@@ -3,17 +3,17 @@
 #
 #   * lib/models and lib/services import neither GetX nor Flutter (rule 1);
 #   * lib/models imports no services, controllers, bindings, views or widgets;
-#   * lib holds no stand-in backend (a Memory*, Demo*, Fake*, Sample* or Mock* class) and supabase/ no seed
+#   * lib holds no stand-in backend (a Memory*, Demo*, Fake*, Sample* or Mock* class) and db/ no seed
 #     script (rule 3).
 #
 # Prints each offender and fails if there is one.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 bad=0
-grep -rnE "^import 'package:(get|flutter|material_ui|supabase_flutter)/" lib/models lib/services && bad=1
+grep -rnE "^import 'package:(get|flutter|material_ui|supabase_flutter|supabase)/" lib/models lib/services && bad=1
 grep -rnE "^(import|export) '(\.\./|package:mihna/)(services|controllers|bindings|views|widgets)/" lib/models && bad=1
 grep -rnE "^\s*(abstract |final |base )?class (Memory|Demo|Fake|Sample|Mock)\w*" lib && bad=1
-find supabase -type f -iname '*seed*' | grep . && bad=1
+find db -type f -iname '*seed*' | grep . && bad=1
 if [ "$bad" = 1 ]; then
   echo "Layer check failed: see ARCHITECTURE.md, rules 1 and 3." >&2
   exit 1

@@ -4,6 +4,10 @@
 -- Every table has row-level security and is read through its select policy. Writes do not go to the tables: the app
 -- calls the functions at the end, which check the caller's role and keep each change idempotent, so a phone that sends
 -- the same queued change twice (it went out, but the answer was lost in a weak signal) changes nothing the second time.
+--
+-- It runs on Neon with Neon Auth and the Data API turned on (docs/SETUP.md): accounts live in neon_auth."user", and
+-- auth.uid() is the signed-in person's id from the request's token. People are not tied to neon_auth by foreign keys,
+-- which Neon Auth owns; leaving a workshop removes their rows through members.
 
 create type public.member_role as enum ('trainee', 'supervisor', 'admin');
 create type public.skill_status as enum ('practised', 'signed_off', 'returned');
@@ -13,16 +17,16 @@ create table public.workshops (
   name text not null check (length(trim(name)) between 1 and 120),
   -- The trade whose checklist the workshop uses (lib/models/trade.dart). The pilot has one: auto_repair.
   trade text not null default 'auto_repair' check (trade ~ '^[a-z_]{2,40}$'),
-  created_by uuid not null default auth.uid() references auth.users on delete restrict,
+  created_by uuid not null default auth.uid(),
   created_at timestamptz not null default now()
 );
 
 create table public.members (
   workshop_id uuid not null references public.workshops on delete cascade,
-  user_id uuid not null references auth.users on delete cascade,
+  user_id uuid not null,
   role public.member_role not null,
   display_name text not null check (length(trim(display_name)) between 1 and 80),
-  added_by uuid references auth.users on delete set null,
+  added_by uuid,
   created_at timestamptz not null default now(),
   primary key (workshop_id, user_id)
 );
@@ -33,13 +37,13 @@ create index members_user on public.members (user_id);
 create table public.skill_records (
   id uuid primary key default gen_random_uuid(),
   workshop_id uuid not null references public.workshops on delete cascade,
-  trainee_id uuid not null references auth.users on delete cascade,
+  trainee_id uuid not null,
   skill_code text not null check (skill_code ~ '^[a-z0-9_.]{2,60}$'),
   status public.skill_status not null default 'practised',
   note text not null default '' check (length(note) <= 1000),
   -- When it happened in the workshop, as the phone saw it, not when the signal came back.
   practised_at timestamptz not null,
-  reviewed_by uuid references auth.users on delete set null,
+  reviewed_by uuid,
   review_note text not null default '' check (length(review_note) <= 1000),
   reviewed_at timestamptz,
   updated_at timestamptz not null default now(),
@@ -71,8 +75,12 @@ create policy "skill_records: own, or the workshop's for supervisors" on public.
   );
 
 -- No insert, update or delete policies: with RLS on, direct writes are refused. The functions below do them.
-revoke all on public.workshops, public.members, public.skill_records from anon;
+-- Neon's Data API runs a signed-in request as the authenticated role and grants it nothing by default, so it gets
+-- reading only; a request without a token runs as anonymous and gets nothing.
+grant usage on schema public to authenticated;
+revoke all on public.workshops, public.members, public.skill_records from anonymous;
 revoke insert, update, delete on public.workshops, public.members, public.skill_records from authenticated;
+grant select on public.workshops, public.members, public.skill_records to authenticated;
 
 -- Starts a workshop and makes the caller its admin. Returns the workshop's id.
 create function public.start_workshop(p_name text, p_display_name text) returns uuid
@@ -98,7 +106,7 @@ begin
   if public.my_role(p_workshop) is distinct from 'admin' then
     raise exception 'Only an admin can add people' using errcode = 'P0001';
   end if;
-  select id into them from auth.users where lower(email) = lower(trim(p_email));
+  select id into them from neon_auth."user" where lower(email) = lower(trim(p_email));
   if them is null then
     raise exception 'No account has that email. Ask them to create one first.' using errcode = 'P0001';
   end if;
@@ -165,6 +173,6 @@ begin
 end $$;
 
 revoke execute on function public.my_role, public.start_workshop, public.add_member, public.remove_member,
-  public.practise_skill, public.review_skill from public, anon;
+  public.practise_skill, public.review_skill from public, anonymous;
 grant execute on function public.my_role, public.start_workshop, public.add_member, public.remove_member,
   public.practise_skill, public.review_skill to authenticated;

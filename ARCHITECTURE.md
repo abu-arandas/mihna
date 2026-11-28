@@ -4,12 +4,19 @@ Mihna keeps the Arandas Tech house structure from Zirr Starter, with three chang
 
 - **`lib/platform/`** holds the one piece of platform storage the services need (`PrefsStore`, the phone's own
   storage behind the plain-Dart `LocalStore`). Services stay free of Flutter (rule 1).
-- **Writes go through database functions, not tables.** `supabase/migrations` gives every table RLS and a select
+- **Writes go through database functions, not tables.** `db/migrations` gives every table RLS and a select
   policy, and refuses direct inserts, updates and deletes. The app calls `start_workshop`, `add_member`,
   `remove_member`, `practise_skill` and `review_skill`, which check the caller's role and are safe to call twice,
   so a change the queue resends after a lost answer does no harm.
 - **There are Dart tests** (`test/`): the queue's ordering, retry, replacement and refusal rules, and every main
   screen at phone width in Arabic and English, light and dark. Their stand-in services live only in `test/`.
+
+It also leaves the starter's Supabase for **Neon** (Postgres, Neon Auth and the Data API, which speaks PostgREST):
+Supabase's free plan allows two active projects and both were taken. The SQL moved as it was, so rules 3 and 4 hold
+with "Neon project" for "Supabase project". `lib/services` talks to Neon with `postgrest` and `http`
+(`NeonData`, `NeonAuthService`); `main.dart` hands them in, and `lib/platform/http_client.dart` picks the browser's
+client on the web. The session is a cookie the phone keeps itself, so the app opens signed in with no signal
+(docs/SETUP.md).
 
 The rest of this file is the starter's, unchanged.
 

@@ -32,7 +32,7 @@ The pilot is **light-vehicle auto repair in Amman**, for 5 to 10 workshops and o
 - **Practical hours, two kinds kept apart:** *workshop hours* (confirmed shifts) and *hands-on hours* (checked
   jobs), each with what still waits for a supervisor. Trainees see theirs; supervisors see every trainee's.
 - Every id is made on the phone, so all seven new actions go through the same offline queue and are safe to send
-  twice ([`supabase/migrations/20261128000000_jobs_and_hours.sql`](supabase/migrations/20261128000000_jobs_and_hours.sql)).
+  twice ([`db/migrations/20261128000000_jobs_and_hours.sql`](db/migrations/20261128000000_jobs_and_hours.sql)).
 
 Next, in order: photo and voice evidence, safety induction and PPE sign-off, and a shareable bilingual
 verified-skills page. Not planned for the pilot: payroll, a job marketplace, a full LMS, broad compliance reporting,
@@ -40,12 +40,13 @@ or automated safety decisions.
 
 ## Run it
 
-Flutter 3.50.0. It runs on your own Supabase project: apply `supabase/migrations` to it ([docs/SETUP.md](docs/SETUP.md)),
+Flutter 3.50.0. It runs on a [Neon](https://neon.com) project (Postgres, Neon Auth and the Data API, all on the free
+plan): turn on Auth and the Data API, apply `db/migrations` ([docs/SETUP.md](docs/SETUP.md)),
 then:
 
 ```bash
 flutter pub get
-flutter run -d chrome --dart-define=SUPABASE_URL=https://<project>.supabase.co --dart-define=SUPABASE_ANON_KEY=<publishable key>
+flutter run --dart-define=NEON_AUTH_URL=<Auth URL, ends in /auth> --dart-define=NEON_DATA_API_URL=<Data API URL, ends in /rest/v1>
 ```
 
 ## Checks
