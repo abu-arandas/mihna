@@ -1,8 +1,7 @@
-import 'package:supabase/supabase.dart';
-
 import '../models/change.dart';
 import '../models/job.dart';
 import '../models/skill_record.dart';
+import 'neon_data.dart';
 import 'workshop_service.dart';
 
 /// The skill records, jobs and shifts of a workshop, and sending the changes the phone queued
@@ -22,37 +21,38 @@ abstract interface class LogbookService {
   Future<void> send(Change change);
 }
 
-class SupabaseLogbookService implements LogbookService {
-  SupabaseLogbookService(this._client);
+class NeonLogbookService implements LogbookService {
+  NeonLogbookService(this._data);
 
-  final SupabaseClient _client;
+  final NeonData _data;
 
   @override
   Future<List<SkillRecord>> records(String workshopId) async {
-    final rows = await _client.from('skill_records').select().eq('workshop_id', workshopId).order('updated_at');
+    final rows = await (await _data.client()).from('skill_records').select().eq('workshop_id', workshopId).order('updated_at');
     return [for (final row in rows) SkillRecord.fromJson(row)];
   }
 
   @override
   Future<List<Job>> jobs(String workshopId) async {
-    final rows = await _client.from('jobs').select().eq('workshop_id', workshopId).order('assigned_at');
+    final rows = await (await _data.client()).from('jobs').select().eq('workshop_id', workshopId).order('assigned_at');
     return [for (final row in rows) Job.fromJson(row)];
   }
 
   @override
   Future<List<Shift>> shifts(String workshopId) async {
-    final rows = await _client.from('shifts').select().eq('workshop_id', workshopId).order('check_in');
+    final rows = await (await _data.client()).from('shifts').select().eq('workshop_id', workshopId).order('check_in');
     return [for (final row in rows) Shift.fromJson(row)];
   }
 
   @override
-  Future<void> send(Change change) => rejecting(
-    () => switch (change) {
-      PractiseChange() => _client.rpc<void>(
+  Future<void> send(Change change) => rejecting(() async {
+    final client = await _data.client();
+    await switch (change) {
+      PractiseChange() => client.rpc<void>(
         'practise_skill',
         params: {'p_workshop': change.workshopId, 'p_skill': change.skillCode, 'p_note': change.note, 'p_at': change.at.toUtc().toIso8601String()},
       ),
-      ReviewChange() => _client.rpc<void>(
+      ReviewChange() => client.rpc<void>(
         'review_skill',
         params: {
           'p_workshop': change.workshopId,
@@ -63,7 +63,7 @@ class SupabaseLogbookService implements LogbookService {
           'p_at': change.at.toUtc().toIso8601String(),
         },
       ),
-      AssignJobChange(:final job) => _client.rpc<void>(
+      AssignJobChange(:final job) => client.rpc<void>(
         'assign_job',
         params: {
           'p_id': job.id,
@@ -75,21 +75,21 @@ class SupabaseLogbookService implements LogbookService {
           'p_at': change.at.toUtc().toIso8601String(),
         },
       ),
-      FinishJobChange() => _client.rpc<void>(
+      FinishJobChange() => client.rpc<void>(
         'finish_job',
         params: {'p_id': change.jobId, 'p_minutes': change.minutes, 'p_note': change.note, 'p_at': change.at.toUtc().toIso8601String()},
       ),
-      CheckJobChange() => _client.rpc<void>(
+      CheckJobChange() => client.rpc<void>(
         'check_job',
         params: {'p_id': change.jobId, 'p_minutes': change.minutes, 'p_note': change.note, 'p_at': change.at.toUtc().toIso8601String()},
       ),
-      CancelJobChange() => _client.rpc<void>('cancel_job', params: {'p_id': change.jobId}),
-      CheckInChange() => _client.rpc<void>(
+      CancelJobChange() => client.rpc<void>('cancel_job', params: {'p_id': change.jobId}),
+      CheckInChange() => client.rpc<void>(
         'check_in',
         params: {'p_id': change.shiftId, 'p_workshop': change.workshopId, 'p_at': change.at.toUtc().toIso8601String()},
       ),
-      CheckOutChange() => _client.rpc<void>('check_out', params: {'p_id': change.shiftId, 'p_at': change.at.toUtc().toIso8601String()}),
-      ConfirmShiftChange() => _client.rpc<void>(
+      CheckOutChange() => client.rpc<void>('check_out', params: {'p_id': change.shiftId, 'p_at': change.at.toUtc().toIso8601String()}),
+      ConfirmShiftChange() => client.rpc<void>(
         'confirm_shift',
         params: {
           'p_id': change.shiftId,
@@ -98,6 +98,6 @@ class SupabaseLogbookService implements LogbookService {
           'p_at': change.at.toUtc().toIso8601String(),
         },
       ),
-    },
-  );
+    };
+  });
 }

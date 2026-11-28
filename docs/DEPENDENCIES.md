@@ -9,8 +9,9 @@ this list current when a dependency is added or upgraded: buyers and reviewers r
 | `material_ui` | 1.11.0 | BSD-3-Clause | The Material widgets and their Arabic and English strings (out of the SDK since Flutter 3.50; brings `cupertino_ui` 1.1.6) |
 | `flutter_localizations` | SDK | BSD-3-Clause | Only for the old Material strings GetX's own app needs (see ARCHITECTURE.md) |
 | `get` | 4.7.3, pinned | MIT | State, DI, routing and `.tr` in controllers and views. Single maintainer: see ARCHITECTURE.md |
-| `supabase_flutter` | 2.18.3 | MIT | Opens Supabase and keeps the session (used only in `main.dart`) |
-| `supabase` | 2.16.5 | MIT | The plain-Dart client the services use |
+| `postgrest` | 2.9.1 | MIT | The plain-Dart PostgREST client the services use for Neon's Data API |
+| `http` | 1.6.0 | BSD-3-Clause | Neon Auth's HTTP API (`NeonAuthService`), and the Data API underneath `postgrest` |
+| `shared_preferences` | see `pubspec.lock` | BSD-3-Clause | The phone's storage for the offline queue and the session (`lib/platform`) |
 | `sentry` | 10.6.0 | BSD-3-Clause | Error reports, sent only when the build is given a `SENTRY_DSN` (`lib/config/errors.dart`, docs/DEPLOY.md) |
 
 Dev only: `flutter_lints` 6.0.0 (BSD-3-Clause).

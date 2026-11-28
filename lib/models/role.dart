@@ -1,4 +1,4 @@
-/// What a person does in a workshop. The database checks it on every write (supabase/migrations).
+/// What a person does in a workshop. The database checks it on every write (db/migrations).
 enum Role {
   /// Logs the skills they practised.
   trainee,

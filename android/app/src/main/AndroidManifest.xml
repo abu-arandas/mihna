@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The app talks to Neon over the internet; release builds need this said out loud. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Mihna"
         android:name="${applicationName}"

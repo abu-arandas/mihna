@@ -109,8 +109,8 @@ class AuthFrame extends StatelessWidget {
 
 /// The checks the forms share. Their messages are English keys, translated here.
 abstract final class AuthChecks {
-  /// The shortest password the forms accept. Supabase's own minimum (Authentication → Providers → Email) should be
-  /// the same or lower, or its message shows instead.
+  /// The shortest password the forms accept. Neon Auth's own minimum (8 by default) should be the same or lower, or
+  /// its message shows instead.
   static const minPasswordLength = 8;
 
   static String? required(String? value) => (value ?? '').trim().isEmpty ? 'Required'.tr : null;

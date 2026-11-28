@@ -6,7 +6,7 @@ import '../../controllers/session_controller.dart';
 import '../../widgets/motion.dart';
 import 'auth_frame.dart';
 
-/// A new account with an email and password. When the Supabase project confirms emails, the person is told to
+/// A new account with an email and password. When the Neon project verifies emails at sign-up, the person is told to
 /// check their inbox; otherwise they are signed in and taken into the app.
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});

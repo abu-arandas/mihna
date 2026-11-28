@@ -30,6 +30,10 @@ class Brand {
   static const locales = [Locale('ar'), Locale('en')];
 
   /// Whether the sign-in page offers "Create an account". Turn it off for a product whose accounts are made by an
-  /// admin, and also turn off "Allow new users to sign up" in the Supabase project, which is what really stops it.
+  /// admin, and also turn off sign-up in the project's Neon Auth settings, which is what really stops it.
   static const allowSignUp = true;
+
+  /// The web address the app is served from. Phone builds send it to Neon Auth as their `Origin`, so it must be one of
+  /// the project's trusted domains (docs/SETUP.md). A build can give another with `--dart-define=APP_ORIGIN=...`.
+  static const appOrigin = 'https://mihna.arandas.tech';
 }

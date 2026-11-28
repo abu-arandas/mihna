@@ -21,8 +21,8 @@ jobs:
       - run: tool/check_layers.sh
       - run: node tool/check_arabic.mjs
       - run: flutter test
-      # Placeholder keys: CI only checks that the web build compiles. Real builds take the project's keys.
-      - run: flutter build web --release --wasm --dart-define=SUPABASE_URL=https://placeholder.supabase.co --dart-define=SUPABASE_ANON_KEY=sb_publishable_placeholder_for_ci
+      # Placeholder addresses: CI only checks that the web build compiles. Real builds take the project's addresses.
+      - run: flutter build web --release --wasm --dart-define=NEON_AUTH_URL=https://placeholder.neonauth.eu-central-1.aws.neon.tech/neondb/auth --dart-define=NEON_DATA_API_URL=https://placeholder.apirest.eu-central-1.aws.neon.tech/neondb/rest/v1
 
   database:
     runs-on: ubuntu-latest
